@@ -1,4 +1,4 @@
-"""Adapter for Qwen3-14B-Instruct JSON generation."""
+"""Adapter for Qwen3 JSON generation."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 
-DEFAULT_CHAT_MODEL = "Qwen/Qwen3-14B-Instruct"
+DEFAULT_CHAT_MODEL = "Qwen/Qwen3-14B"
 
 
 class QwenJSONDecodeError(ValueError):
@@ -22,7 +22,7 @@ class QwenJSONDecodeError(ValueError):
 
 
 class QwenChat:
-    """Thin chat adapter for Qwen3-14B-Instruct.
+    """Thin chat adapter for Qwen3 chat-style generation.
 
     The class is intentionally business-prompt agnostic. Pass an existing model
     wrapper, a callable chat client, or a Hugging Face model/tokenizer pair.
@@ -131,14 +131,14 @@ class QwenChat:
         )
 
     def _load_transformers_model(self) -> None:
-        """Lazy-load Qwen3-14B-Instruct with Hugging Face Transformers."""
+        """Lazy-load Qwen3 with Hugging Face Transformers."""
 
         try:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError as exc:
             raise ImportError(
-                "QwenChat requires torch and transformers to load Qwen3-14B-Instruct. "
+                "QwenChat requires torch and transformers to load Qwen3. "
                 "Install them or pass an already-loaded model/tokenizer into QwenChat."
             ) from exc
 

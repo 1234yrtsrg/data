@@ -1,0 +1,15 @@
+# Install PyTorch separately for your server CUDA version before this file.
+# Example for CUDA 12.8:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+
+git+https://github.com/huggingface/diffusers
+transformers>=4.51.3
+accelerate
+safetensors
+sentencepiece
+protobuf
+pydantic>=2.0
+pillow
+numpy
+peft
+mediapipe

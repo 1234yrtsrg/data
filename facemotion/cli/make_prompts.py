@@ -14,7 +14,7 @@ from facemotion.motion.schema import model_to_dict
 
 
 def build_llm(args: argparse.Namespace) -> QwenChat:
-    """Create the Qwen3-14B-Instruct chat adapter."""
+    """Create the Qwen3 chat adapter."""
 
     return QwenChat(
         model_id=args.model,
@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         default=DEFAULT_CHAT_MODEL,
-        help="Qwen3 instruct model id or local model path.",
+        help="Qwen3 model id or local model path.",
     )
     parser.add_argument(
         "--device-map",
