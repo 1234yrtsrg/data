@@ -4,7 +4,7 @@ from facemotion import FacemotionBlendshapeWorkflow
 TEXT = "A person is smiling gently and then glancing sideways."
 IMAGE_PATH = "portrait.png"
 MEDIAPIPE_MODEL_PATH = "models/face_landmarker.task"
-OUTPUT_DIR = "outputs/run_smile_glance"
+OUTPUT_DIR = "outputs"
 GPU = 7
 
 
