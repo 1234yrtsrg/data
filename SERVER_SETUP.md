@@ -46,6 +46,26 @@ pip install -r requirements.txt
 - PEFT for loading the Lightning LoRA.
 - MediaPipe for Face Landmarker blendshape extraction.
 
+MediaPipe may also need system OpenGL/EGL runtime libraries. On Ubuntu/Debian
+servers or containers, install them before running blendshape extraction:
+
+```bash
+apt-get update
+apt-get install -y libgl1 libglib2.0-0 libegl1 libgles2
+```
+
+On older Ubuntu images, the package names may be:
+
+```bash
+apt-get install -y libgl1-mesa-glx libegl1-mesa libgles2-mesa
+```
+
+If you cannot use `apt-get`, try the conda-forge runtime libraries:
+
+```bash
+conda install -c conda-forge libgl libegl libgles -y
+```
+
 ## 4. Prepare Models
 
 The Qwen models are loaded from Hugging Face by default:
@@ -66,6 +86,40 @@ models/face_landmarker.task
 The path is passed with `--model_path`; it is not hard-coded.
 
 ## 5. Run The Pipeline
+
+### One Command
+
+Run text-to-prompts, image editing, and MediaPipe blendshape extraction in one
+workflow:
+
+```bash
+python -m facemotion.cli.run_blendshape_pipeline \
+  --text "A person is smiling gently and then glancing sideways." \
+  --image portrait.png \
+  --model_path models/face_landmarker.task \
+  --output_dir outputs/run_smile_glance \
+  --gpu 7
+```
+
+This writes:
+
+```text
+outputs/run_smile_glance/prompts.json
+outputs/run_smile_glance/states/000.png
+outputs/run_smile_glance/states/001.png
+outputs/run_smile_glance/states/002.png
+outputs/run_smile_glance/blendshapes.json
+```
+
+On V100 32GB, the one-command workflow defaults to:
+
+```text
+--device-map auto
+--torch-dtype float16
+--offload sequential
+```
+
+### Step By Step
 
 Generate the structured motion spec and edit prompts:
 
@@ -178,3 +232,18 @@ python -m facemotion.cli.make_prompts \
 The warning from `hf auth login` about missing git credential helper is harmless
 for downloading public/read-access models. It only affects saving credentials
 for git operations such as pushing to the Hub.
+
+If `extract_blendshapes` returns an error like:
+
+```text
+libGLESv2.so.2: cannot open shared object file: No such file or directory
+```
+
+install the OpenGL/EGL system libraries from step 3, then rerun:
+
+```bash
+python -m facemotion.cli.extract_blendshapes \
+  --image_dir outputs/states \
+  --model_path models/face_landmarker.task \
+  --output outputs/blendshapes.json
+```

@@ -255,6 +255,7 @@ class PromptCompiler:
         )
         try:
             prompt_set = validate_model(EditPromptSet, raw)
+            prompt_set = strengthen_gaze_prompts(spec, prompt_set)
             validate_prompt_set_against_spec(spec, prompt_set)
             return prompt_set
         except (ValidationError, ValueError) as exc:
@@ -265,6 +266,78 @@ class PromptCompiler:
                 "Failed to validate EditPromptSet from Qwen output: "
                 f"{exc}\nRaw output:\n{raw_output}"
             ) from exc
+
+
+def strengthen_gaze_prompts(spec: MotionSpec, prompt_set: EditPromptSet) -> EditPromptSet:
+    """Add deterministic eye-gaze cues for states with visible sideways gaze.
+
+    Image-edit models often under-follow eye-only edits. These cues make the
+    desired gaze visible without asking for a multi-image result or a profile.
+    """
+
+    strengthened_items: list[EditPromptItem] = []
+    state_by_index = {state.state_index: state for state in spec.states}
+
+    for item in prompt_set.prompts:
+        state = state_by_index[item.state_index]
+        extra_sentence = _build_sideways_gaze_sentence(state.gaze.yaw)
+        if extra_sentence:
+            update: dict[str, str] = {}
+            if extra_sentence.lower() not in item.edit_prompt.lower():
+                update["edit_prompt"] = _insert_before_visibility_constraints(
+                    item.edit_prompt,
+                    extra_sentence,
+                )
+            update["negative_prompt"] = _append_negative_terms(
+                item.negative_prompt,
+                ["direct eye contact", "eyes looking straight forward"],
+            )
+            item = item.model_copy(update=update)
+        strengthened_items.append(item)
+
+    return prompt_set.model_copy(update={"prompts": strengthened_items})
+
+
+def _build_sideways_gaze_sentence(gaze_yaw: float) -> str:
+    if abs(gaze_yaw) < 6.0:
+        return ""
+
+    direction = "right" if gaze_yaw > 0 else "left"
+    side = f"the {direction} side of the image"
+    if abs(gaze_yaw) >= 12.0:
+        intensity = "clearly"
+        modifier = "a clear sideways glance"
+    else:
+        intensity = "noticeably"
+        modifier = "a partial sideways glance"
+
+    return (
+        f"The pupils and irises are {intensity} shifted toward {side}, with visible "
+        f"white of the eyes on the opposite side, so the person is not making direct "
+        f"eye contact with the camera; this should read as {modifier} while both eyes "
+        f"remain open and clearly visible."
+    )
+
+
+def _insert_before_visibility_constraints(edit_prompt: str, sentence: str) -> str:
+    anchor = "The shoulders and upper body remain facing the camera directly."
+    if anchor in edit_prompt:
+        return edit_prompt.replace(anchor, f"{sentence} {anchor}", 1)
+
+    prompt = edit_prompt.rstrip()
+    if prompt and not prompt.endswith("."):
+        prompt += "."
+    return f"{prompt} {sentence}"
+
+
+def _append_negative_terms(negative_prompt: str, terms: list[str]) -> str:
+    existing = negative_prompt.lower()
+    additions = [term for term in terms if term.lower() not in existing]
+    if not additions:
+        return negative_prompt
+
+    prompt = negative_prompt.rstrip().rstrip(",")
+    return f"{prompt}, {', '.join(additions)}"
 
 
 def validate_prompt_set_against_spec(spec: MotionSpec, prompt_set: EditPromptSet) -> None:
